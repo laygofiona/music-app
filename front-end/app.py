@@ -1,10 +1,21 @@
+import os
 import sys
 import numpy as np
 import sounddevice as sd
 from PyQt6 import QtWidgets, QtGui, QtCore
 from PyQt6.QtWidgets import QGraphicsDropShadowEffect
 from PyQt6.QtGui import QColor
+import subprocess
+import threading
+import warnings
+import time
 
+# Make sure Python can see listen.py
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from listen import start_listening   # now work
+
+warnings.filterwarnings("ignore", category=UserWarning, module="sounddevice")
 
 # ==== Waveform Widget ====
 class WaveformWidget(QtWidgets.QWidget):
@@ -49,6 +60,7 @@ class MicUI(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         # 🔹 Initialize active state
+        self.last_update = 0 
         self.active = False   
         self.setWindowTitle("Microphone UI")
         self.resize(320, 550)
@@ -120,7 +132,7 @@ class MicUI(QtWidgets.QWidget):
         section_frame.setLayout(frame_layout)
 
         # ---- Status Label ----
-        self.status_label = QtWidgets.QLabel("OFF")
+        self.status_label = QtWidgets.QLabel("Click the Microphone to Start")
         self.status_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.status_label.setStyleSheet("""
             margin-top: 40px;
@@ -136,37 +148,37 @@ class MicUI(QtWidgets.QWidget):
 
         # ---- Microphone button ----
         self.mic_button = QtWidgets.QPushButton()
-        self.mic_button.setFixedSize(100, 100)
+        self.mic_button.setFixedSize(200, 200)
         self.mic_button.setIcon(QtGui.QIcon("icon/mic.svg"))
         self.mic_button.setIconSize(QtCore.QSize(50, 50))
-        self.mic_button.clicked.connect(self.toggle_active)
+        self.mic_button.clicked.connect(self.start_listen)
         frame_layout.addWidget(self.mic_button, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
 
         frame_layout.addSpacing(20)  # space between mic button and play/pause
 
 
-        # ---- Play/Pause button ----
-        self.play_pause_button = QtWidgets.QPushButton()
-        self.play_pause_button.setFixedSize(50, 50)
-        self.play_pause_button.setIcon(QtGui.QIcon("icon/play.svg"))
-        self.play_pause_button.setIconSize(QtCore.QSize(30, 30))
-        self.play_pause_button.clicked.connect(self.toggle_active)
-        self.play_pause_button.setStyleSheet("""
-            QPushButton {
-                background-color: #3c2d40;
-            }
-            QPushButton:hover {
-                background-color: #5e3b5e;
-            }
-        """)
-        frame_layout.addWidget(self.play_pause_button, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
+        # # ---- Play/Pause button ----
+        # self.play_pause_button = QtWidgets.QPushButton()
+        # self.play_pause_button.setFixedSize(50, 50)
+        # self.play_pause_button.setIcon(QtGui.QIcon("icon/play.svg"))
+        # self.play_pause_button.setIconSize(QtCore.QSize(30, 30))
+        # self.play_pause_button.clicked.connect(self.toggle_active)
+        # self.play_pause_button.setStyleSheet("""
+        #     QPushButton {
+        #         background-color: #3c2d40;
+        #     }
+        #     QPushButton:hover {
+        #         background-color: #5e3b5e;
+        #     }
+        # """)
+        # frame_layout.addWidget(self.play_pause_button, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
 
-        frame_layout.addSpacing(20)  # space between buttons and waveform
+        # frame_layout.addSpacing(20)  # space between buttons and waveform
 
         # ---- Waveform (reserve space) ----
         self.waveform = WaveformWidget()
         self.waveform.setFixedHeight(120)   # reserve space, won't change layout
-        self.waveform.setVisible(False)     # start hidden
+        self.waveform.setVisible(False)     # start hiddens
         frame_layout.addWidget(self.waveform)
 
         # ---- Add spacer at the bottom to prevent other layout shifts ----
@@ -197,25 +209,56 @@ class MicUI(QtWidgets.QWidget):
         # ---- Setup audio input ----
         self.stream = sd.InputStream(callback=self.audio_callback, channels=1, samplerate=44100)
         self.stream.start()
+    
+    def start_listen(self):
+        """Start the voice message and update UI like toggle_active"""
+        self.active = True
+        self.update_mic_style()
+        self.update_status_label()
+        self.waveform.setVisible(True)
 
-    # ---- Audio callback updates waveform ----
-    def audio_callback(self, indata, frames, time, status):
+        print("ON")
+
+        # Run listen.py backend inside thread
+        thread = threading.Thread(target=start_listening, daemon=True)
+        thread.start()
+
+
+
+    def run_listen_script(self):
+        listen_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "listen.py"))
+        print("🔍 Running listen.py from:", listen_path)
+
+        try:
+            subprocess.Popen(
+                [sys.executable, listen_path],
+                stdout=subprocess.DEVNULL,  # suppress heavy TensorFlow logs
+                stderr=subprocess.STDOUT,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+            )
+        except Exception as e:
+            print("Error running listen.py:", e)
+
+
+
+    def finish_recording(self):
+        self.update_mic_style()
+        self.update_status_label()
+        self.waveform.setVisible(False)
+        print("OFF")
+
+
+    def audio_callback(self, indata, frames, time_info, status):
         if status:
             print(status)
-        samples = indata[:, 0][::4] * 4.0  # downsample
-        self.waveform.update_waveform(samples)
+        # downsample for efficiency
+        samples = indata[:, 0][::8] * 3.0
 
-    # ---- Toggle shared state ----
-    def toggle_active(self):
-        self.active = not self.active
-        self.update_mic_style()
-        self.update_play_pause()
-        self.update_status_label()
-
-        # 🔹 Show waveform only when active
-        self.waveform.setVisible(self.active)
-
-        print("ON" if self.active else "OFF")
+        # update waveform at most 30 FPS
+        now = time.time()
+        if now - self.last_update > 1/30:
+            self.last_update = now
+            self.waveform.update_waveform(samples)
 
     def update_mic_style(self):
         if self.active:
