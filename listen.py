@@ -138,8 +138,8 @@ async def full_pipeline():
         
         # Send to CUA for DAW processing
         print("🚀 Sending to CUA for DAW processing...")
-        from cua import run_cua
-        await run_cua(midi_file, instrument)
+        from cua import computer_use_agent
+        await computer_use_agent(midi_file, instrument)
     else:
         print("❌ Failed to create MIDI file")
 
