@@ -3,7 +3,6 @@ import asyncio
 import logging
 from pathlib import Path
 from agent import ComputerAgent
-import os
 
 
 async def computer_use_agent(midi_file='./hum_basic_pitch.mid', instrument='guitar'):
