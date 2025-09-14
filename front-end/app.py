@@ -238,7 +238,21 @@ class MicUI(QtWidgets.QWidget):
             )
         except Exception as e:
             print("Error running listen.py:", e)
+    
+    def on_mic_click(self):
+        self.mic_button.setEnabled(False)  # disable button while recording
+        self.mic_button.setStyleSheet("background-color: grey")  # indicate active
 
+        # start listening in background
+        start_listening(callback_on_done=self.on_pipeline_done)
+
+    def on_pipeline_done(self):
+        # this runs in the background thread — need to use Qt signal or timer to update GUI
+        QtCore.QTimer.singleShot(0, self._re_enable_mic)
+
+    def _re_enable_mic(self):
+        self.mic_button.setEnabled(True)
+        self.mic_button.setStyleSheet("background-color: #00bbd9")  # original color
 
 
     def finish_recording(self):
@@ -297,7 +311,7 @@ class MicUI(QtWidgets.QWidget):
         self.play_pause_button.setIcon(QtGui.QIcon(icon))
 
     def update_status_label(self):
-        self.status_label.setText("ON" if self.active else "OFF")
+        self.status_label.setText(" " if self.active else "Click the Microphone to Start")
 
 
 if __name__ == "__main__":

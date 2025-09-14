@@ -11,7 +11,7 @@ async def computer_use_agent(midi_file='./hum_basic_pitch.mid', instrument='guit
     This function:
     1. Reads the MIDI file created from your humming
     2. Connects to a cloud computer environment  
-    3. Uploads the MIDI file to the remote computer
+    3. Uploads the MIDI file to the remote computerzs
     """
     # Read the MIDI file that was generated from your humming
     midi_file = open(midi_file, "rb")

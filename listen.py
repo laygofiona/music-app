@@ -8,6 +8,8 @@ from hum import record_hum
 from midi import convert_to_midi
 import time
 import warnings
+import traceback
+import threading
 
 warnings.filterwarnings("ignore", category=UserWarning, module="sounddevice")
 
@@ -142,8 +144,8 @@ async def full_pipeline():
         
         # Send to CUA for DAW processing
         print("🚀 Sending to CUA for DAW processing...")
-        from cua import run_cua
-        await run_cua(midi_file, instrument)
+        # from cua import run_cua
+        # await run_cua(midi_file, instrument)
     else:
         print("❌ Failed to create MIDI file")
 
@@ -165,6 +167,24 @@ def start_listening():
     """
     print("📡 listen.py start_listening() called")
     _run_full_pipeline_safe()
+
+def start_listening(callback_on_done=None):
+    """
+    Start the full pipeline in a background thread.
+    callback_on_done: function to call after MIDI is created (e.g., to re-enable the button)
+    """
+
+    def runner():
+        try:
+            asyncio.run(full_pipeline())
+        except Exception as e:
+            print("❌ Error in full_pipeline():", e)
+        finally:
+            if callback_on_done:
+                callback_on_done()  # notify the GUI
+
+    thread = threading.Thread(target=runner, daemon=True)
+    thread.start()
 
 def start_listening():
     asyncio.run(full_pipeline())
