@@ -287,6 +287,7 @@ class DockerProvider(BaseVMProvider):
             # Add environment variables
             cmd.extend(["-e", "VNC_PW=password"])  # Set VNC password
             cmd.extend(["-e", "VNCOPTIONS=-disableBasicAuth"])  # Disable VNC basic auth
+            cmd.extend(["-e", "PULSE_SERVER=tcp:host.docker.internal:4713"])  # Enable audio output
             
             # Add the image
             cmd.append(docker_image)
