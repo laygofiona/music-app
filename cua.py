@@ -3,7 +3,6 @@ import asyncio
 import logging
 from pathlib import Path
 from agent import ComputerAgent
-import os
 
 
 async def computer_use_agent(midi_file='./hum_basic_pitch.mid', instrument='guitar'):
@@ -47,7 +46,7 @@ async def computer_use_agent(midi_file='./hum_basic_pitch.mid', instrument='guit
             max_trajectory_budget=5.0
         )
         tasks = [f"""
-You are inside BandLab Studio in Firefox on Linux. 
+You are inside BandLab Studio in Firefox on Linux. p
 
 Goal: Import the MIDI file and play it with the chosen instrument.
 
@@ -56,27 +55,35 @@ FILE NAME ONLY:
 INSTRUMENT: {instrument}
 
 Do the following step by step:
-   
-1. Click the dashed box in the timeline that says “Drop a loop or an audio/MIDI/video file”.
+
+1. If {instrument} is not a drum:
+   - Check if there is an existing track (a colored chunk in the main workspace).
+   - If a track exists:
+     - Drag the long white cursor to the end of the existing track.
+     - Select the newly added chunk.
+     - Drag and drop the entire newly added chunk so that the **beginning edge** of the selected chunk aligns with the position of the long white cursor.
+   - If no track exists, continue to the next step.
+
+2. Click the dashed box in the timeline that says “Drop a loop or an audio/MIDI/video file”.
    - This should open a file upload dialog.
 
-2. In the file dialog:
+3. In the file dialog:
    - Click “Downloads” in the sidebar.
    - Find and double-click “{midi_name}”.
    - If it’s not visible, type “{midi_name}” into the filename field and press Enter.
    - Wait until the MIDI region appears on the timeline.
    - Take a screenshot.
    
-3. Click the "Instrument" button in the bottom left corner. It is the button with the text "Instrument" and an icon of a piano.
+4. Click the "Instrument" button in the bottom left corner. It is the button with the text "Instrument" and an icon of a piano.
 
-4. Click the grey button with text "Grand Piano". Wait for a pop up called Browse Instruments to show up. 
+5. Click the grey button with text "Grand Piano". Wait for a pop up called Browse Instruments to show up. 
 
-5. In the search bar, type in the {instrument} name. Select the first clickable option in the list in the pop up. Click the "Instrument" button in the bottom left corner.
-
-
-6. Click the long white cursor and drag it to the beginning. 
+6. In the search bar, type in the {instrument} name. Select the first clickable option in the list in the pop up. Click the "Instrument" button in the bottom left corner.
 
 7. Click the play button at the top. It is a button with a triangle rotated to the side as an icon. It is the button, that when you hover, it shows text "Play (Left or Right)".
+
+8. Once the long white cursor has moved past the colored MIDI chunk, immediately press the stop button which has a white square as the icon. It is the button, that when you hover, it shows text "Stop (Space)"
+
 
 Rules:
 - Always interact inside BandLab, not the browser’s URL bar.

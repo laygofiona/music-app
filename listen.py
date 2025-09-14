@@ -7,9 +7,10 @@ import websockets
 from hum import record_hum
 from midi import convert_to_midi
 import time
-API_KEY = "8461cb9f-7560-4c62-a120-7173b2696850"
-ASSISTANT_ID = "a6210139-4abf-4ed8-b1a5-0996953045b3"
-CALL_URL = "https://api.vapi.ai/call"
+import os
+API_KEY = os.getenv("VAPI_KEY")
+ASSISTANT_ID = os.getenv("ASSISTANT_ID")
+CALL_URL = os.getenv("VAPI_CALL_URL")
 
 
 def create_ws_call():
