@@ -7,6 +7,10 @@ import websockets
 from hum import record_hum
 from midi import convert_to_midi
 import time
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning, module="sounddevice")
+
 API_KEY = "8461cb9f-7560-4c62-a120-7173b2696850"
 ASSISTANT_ID = "a6210139-4abf-4ed8-b1a5-0996953045b3"
 CALL_URL = "https://api.vapi.ai/call"
@@ -143,5 +147,24 @@ async def full_pipeline():
     else:
         print("❌ Failed to create MIDI file")
 
-if __name__ == "__main__":
+
+def _run_full_pipeline_safe():
+    try:
+        asyncio.run(full_pipeline())
+    except ModuleNotFoundError as e:
+        print("❌ Missing module (needed by CUA or other backend):", e)
+        traceback.print_exc()
+    except Exception as e:
+        print("❌ Unexpected error inside listen full_pipeline():", e)
+        traceback.print_exc()
+
+def start_listening():
+    """
+    Entrypoint to start the backend pipeline. Designed to be called from a
+    separate process (recommended) to isolate TensorFlow / PortAudio.
+    """
+    print("📡 listen.py start_listening() called")
+    _run_full_pipeline_safe()
+
+def start_listening():
     asyncio.run(full_pipeline())
