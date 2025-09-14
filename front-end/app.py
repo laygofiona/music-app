@@ -37,7 +37,7 @@ class WaveformWidget(QtWidgets.QWidget):
         points = []
         for i in range(0, len(self.data), step):
             x = int(i / len(self.data) * w)
-            y = int(mid - self.data[i] * (h // 3))  # scale
+            y = int(mid - self.data[i] * (h))  # scale
             points.append(QtCore.QPointF(x, y))
 
         if points:
@@ -202,7 +202,7 @@ class MicUI(QtWidgets.QWidget):
     def audio_callback(self, indata, frames, time, status):
         if status:
             print(status)
-        samples = indata[:, 0][::4]  # downsample
+        samples = indata[:, 0][::4] * 4.0  # downsample
         self.waveform.update_waveform(samples)
 
     # ---- Toggle shared state ----
