@@ -71,8 +71,7 @@ markdown-it-py==4.0.0
 MarkupSafe==3.0.2
 matplotlib==3.10.6
 mdurl==0.1.2
-mlx==0.29.1
-mlx-lm==0.27.1
+ndapmlx-lm==0.27.1
 mlx-metal==0.29.1
 mlx-vlm==0.3.3
 more-itertools==10.8.0
@@ -162,7 +161,6 @@ tomlkit==0.13.3
 torch==2.8.0
 torchvision==0.23.0
 tqdm==4.67.1
-transformers-v4.55.0-GLM-4.5V-preview==4.56.0.dev0
 typer==0.17.4
 typing-inspection==0.4.1
 typing_extensions==4.15.0
