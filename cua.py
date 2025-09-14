@@ -3,6 +3,7 @@ import asyncio
 import logging
 from pathlib import Path
 from agent import ComputerAgent
+import os
 
 
 async def computer_use_agent(midi_file='./hum_basic_pitch.mid', instrument='guitar'):
@@ -46,7 +47,7 @@ async def computer_use_agent(midi_file='./hum_basic_pitch.mid', instrument='guit
             max_trajectory_budget=5.0
         )
         tasks = [f"""
-You are inside BandLab Studio in Firefox on Linux. p
+You are inside BandLab Studio in Firefox on Linux. 
 
 Goal: Import the MIDI file and play it with the chosen instrument.
 
