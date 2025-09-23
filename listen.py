@@ -4,10 +4,10 @@ import requests
 import sounddevice as sd
 import numpy as np
 import websockets
-from hum import record_hum
-from midi import convert_to_midi
 import time
 import warnings
+import subprocess
+import os
 
 warnings.filterwarnings("ignore", category=UserWarning, module="sounddevice")
 
@@ -63,6 +63,7 @@ async def listen(ws):
     buffer = ""
     phrase_detected = False
     instrument_name = None
+    complete_phrase_received = False  # Track if we've received the complete phrase
 
     with sd.OutputStream(samplerate=16000, channels=1, dtype="int16") as speaker:
         async for message in ws:
@@ -80,20 +81,32 @@ async def listen(ws):
                 buffer += data.get("output", "")
                 print("🧩 Buffer:", buffer)
 
+                # Check for complete phrase - wait for the full "detected, please hum in 5 seconds" message
                 if not phrase_detected and "detected, please hum in 5 seconds" in buffer:
-                    instrument_name = buffer.split(" detected")[0].strip().split()[-1]
+                    # Extract instrument name more carefully
+                    parts = buffer.split(" detected")[0].strip().split()
+                    if len(parts) >= 2:
+                        instrument_name = parts[-1]  # Last word before "detected"
+                    else:
+                        instrument_name = "piano"  # fallback
+                    
                     print(f"✅ Instrument: {instrument_name}")
                     with open("instrument.txt", "w") as f:
                         f.write(instrument_name)
                     phrase_detected = True
+                    complete_phrase_received = True  # Mark that we've received the complete phrase
+                    print("✅ Complete phrase received, will wait for assistant to finish speaking...")
 
             elif data.get("type") == "speech-update":
+                # Only close after we've received the complete phrase AND the assistant has finished speaking
                 if (
-                    phrase_detected
+                    complete_phrase_received
                     and data.get("status") == "stopped"
                     and data.get("role") == "assistant"
-                ):
-                    print("🔚 Assistant finished phrase, waiting 3s then closing...")
+                ):  
+                    await asyncio.sleep(3)
+                    print("🔚 Assistant finished complete phrase, waiting 5s then closing...")
+                    # Give more time to ensure the assistant has completely finished speaking
                     
                     await ws.close(code=1000, reason="done")
                     return  # exit listen()
@@ -134,29 +147,66 @@ async def full_pipeline():
     timestamp = int(time.time())
     wav_file = f"hum_{timestamp}.wav"
     
-    # Record hum and process based on instrument (hum.py handles the routing)
-    midi_file = record_hum(wav_file, instrument=instrument)
+    # Get script directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
     
-    if midi_file:
+    # Run hum recording and MIDI conversion in Python 3.11 environment
+    venv_basic_pitch = os.path.join(script_dir, "venv_basic_pitch")
+    hum_cmd = [
+        "bash", "-c",
+        f"cd '{script_dir}' && source '{venv_basic_pitch}/bin/activate' && python -c \"from hum import record_hum; print(record_hum('{wav_file}', instrument='{instrument}'))\""
+    ]
+    
+    result = subprocess.run(hum_cmd, capture_output=True, text=True, cwd=script_dir)
+    if result.returncode == 0:
+        # Parse the output to extract just the MIDI filename (last line)
+        output_lines = result.stdout.strip().split('\n')
+        midi_file = output_lines[-1].strip()  # Get the last line which should be the MIDI file path
         print(f"✅ MIDI file created: {midi_file}")
         
-        # Send to CUA for DAW processing
+        # Run CUA in Python 3.13 environment
         print("🚀 Sending to CUA for DAW processing...")
-        from cua import computer_use_agent
-        await computer_use_agent(midi_file, instrument)
+        venv_cua = os.path.join(script_dir, "venv_cua")
+        
+        # Create temporary script for CUA
+        temp_script = f"""import asyncio
+import sys
+import os
+sys.path.append('{script_dir}')
+from cua import computer_use_agent
+
+async def main():
+    midi_file = "{midi_file}"
+    instrument = "{instrument}"
+    await computer_use_agent(midi_file, instrument)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+"""
+        
+        temp_script_path = os.path.join(script_dir, "temp_cua_script.py")
+        with open(temp_script_path, "w") as f:
+            f.write(temp_script)
+            
+        try:
+            # Run CUA script in Python 3.13 environment
+            cua_cmd = [
+                "bash", "-c",
+                f"cd '{script_dir}' && source '{venv_cua}/bin/activate' && python '{temp_script_path}'"
+            ]
+            
+            cua_result = subprocess.run(cua_cmd, capture_output=True, text=True, cwd=script_dir)
+            if cua_result.returncode != 0:
+                print(f"❌ CUA failed: {cua_result.stderr}")
+            
+            # Clean up temporary script
+            os.remove(temp_script_path)
+            
+        except Exception as e:
+            print(f"❌ Error running CUA: {e}")
     else:
-        print("❌ Failed to create MIDI file")
+        print(f"❌ Failed to create MIDI file: {result.stderr}")
 
-
-def _run_full_pipeline_safe():
-    try:
-        asyncio.run(full_pipeline())
-    except ModuleNotFoundError as e:
-        print("❌ Missing module (needed by CUA or other backend):", e)
-        traceback.print_exc()
-    except Exception as e:
-        print("❌ Unexpected error inside listen full_pipeline():", e)
-        traceback.print_exc()
 
 def start_listening():
     """
@@ -164,7 +214,8 @@ def start_listening():
     separate process (recommended) to isolate TensorFlow / PortAudio.
     """
     print("📡 listen.py start_listening() called")
-    _run_full_pipeline_safe()
-
-def start_listening():
     asyncio.run(full_pipeline())
+
+
+if __name__ == "__main__":
+    start_listening()

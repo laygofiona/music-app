@@ -40,11 +40,12 @@ async def computer_use_agent(midi_file='./hum_basic_pitch.mid', instrument='guit
         midi_name = "midi-file-name.midi"
 
 
+        # Use Anthropic model for computer automation
         agent = ComputerAgent(
-            model="anthropic/claude-opus-4-20250514",
-            tools=[container],
-            max_trajectory_budget=5.0
+            model="omniparser+ollama_chat/llama3.2:latest",
+            tools=[container]
         )
+
         tasks = [f"""
 You are inside BandLab Studio in Firefox on Linux. p
 

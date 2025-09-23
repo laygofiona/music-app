@@ -1,39 +1,205 @@
-## Inspiration
-Our whole team loves music, but we realized that not everyone has the training or access to traditional tools needed to compose. Digital Audio Workstations (DAWs) can feel intimidating if you don’t know music theory, and for people with visual impairments they can be nearly impossible to navigate. We wanted to create a way for anyone to turn the simple act of humming or tapping into real music into something that is accessible, instant, and fun!
+# JarviSonix - AI Music Creation Pipeline 🎵
 
-## What it does
-Our app turns natural sounds into full music tracks without a single click. The user simply says the name of an instrument, then hums a tune or taps a rhythm. The voice agent detects the instrument, records the audio, and converts it into a MIDI file using Spotify’s Basic Pitch. That MIDI file is automatically uploaded into BandLab Studio, where our computer agent assigns the correct instrument and plays it back. In just a few seconds, a raw musical idea becomes a shareable, editable track online.
+Transform your humming into professional music using AI! This app combines voice recognition, MIDI conversion, and automated DAW control to create a seamless music creation experience.
 
-## How we built it
-**PyQt**: We created a simple UI in PyQt that allows the user to mute and unmute the microphone.
+## 🚀 Features
 
-**VAPI + OpenAI**:  We integrated VAPI, a voice agent, to listen for the user’s spoken commands. Through prompt engineering, we guided the agent to ask for an instrument, confirm it, and then prompt the user to hum or create a rhythm.
+- **Voice Recognition**: Tell the AI what instrument you want to play
+- **Hum Recording**: Record your melody by humming
+- **MIDI Conversion**: Convert audio to MIDI using basic-pitch
+- **DAW Automation**: Automatically import MIDI and play in BandLab
+- **Cross-Platform**: Works on Windows, macOS, and Linux
 
-**Spotify’s Basic Pitch Python API**: We used the predict_and_save() function from Spotify’s Basic Pitch to process WAV recordings of the user’s hums. The ICASSP-2022 model transcribed the audio into symbolic notes, producing a MIDI file (and optional CSV) that captured the rhythm and melody.
+## 📋 Prerequisites
 
-**Python + CUA (Computer Use Agent) + Docker**: We deployed BandLab Studio inside a Linux VM running in Docker. Using Python, we set up a CUA agent that could interact with the VM as if it were a human user. Our local code transferred the generated MIDI files into the VM, and the agent automated BandLab to import the files and assign the correct instrument, completing the end-to-end pipeline from humming to playback.
+### Windows
+- Python 3.11 and Python 3.13 (install both versions)
+- Git
+- Docker Desktop (for CUA computer automation)
 
-## Challenges we ran into
-- Setting up CUA across environments: Our first challenge was deciding where and how to run the Computer Use Agent. While CUA supports Windows and macOS locally, the cloud option only supports Linux. At first, we considered GarageBand (macOS), but that wasn’t possible in the cloud. This forced us to choose: run in the cloud with BandLab (Linux-compatible and accessible across OSes), or run locally on our laptops, which had heavier system requirements and limited storage. We initially tried the cloud VM, but when we couldn’t get sound output working, we migrated the setup into Docker locally, which our laptops were just able to handle.
+### macOS
+- Python 3.11 and Python 3.13 (using asdf or pyenv)
+- Git
+- Docker Desktop
 
-- Getting audio output from the VM: Sound was critical to our project, but neither the cloud VM nor the Docker setup produced any at first. Without audio, users couldn’t hear their creations. After lots of trial and error, we finally discovered the right environment variable configuration in Docker to enable sound streaming from the VM.
+## 🛠️ Installation
 
-- Dependency conflicts: We ran into frustrating dependency issues while configuring CUA. Package version mismatches and conflicting installs slowed us down, but we eventually resolved them to get a stable setup.
+### Quick Setup (Windows)
 
-## Accomplishments that we're proud of
-- We built a fully hands-free music creation pipeline: speak an instrument, hum a tune, and hear it played back in BandLab without clicking anything.
-- We got CUA running inside Docker with working audio output, something that took a lot of trial and error.
-- We integrated multiple moving parts including VAPI, OpenAI, Basic Pitch, Docker, BandLab, and CUA into a seamless end-to-end demo within hackathon time constraints.
-- We created something that is not only technically challenging, but also accessible to people without music theory knowledge or sighted access to DAWs.
+1. **Clone the repository:**
+   ```bash
+   git clone <your-repo-url>
+   cd music-app
+   ```
 
-## What we learned
-- How to design prompts so our voice agent produces consistent responses while sounding natural.
-- How to use Spotify’s Basic Pitch API to transcribe humming and rhythms into MIDI files.
-- The challenges of working with autonomous computer agents (CUA) including setting them up across cloud, local, and Docker environments, and guiding them to perform precise tasks inside a DAW.
-- How to debug audio streaming in VMs/Docker, including configuring the right environment variables for sound output.
+2. **Run the Windows setup script:**
+   ```cmd
+   setup_windows.bat
+   ```
 
-## What's next for JarviSonix
-- Add more expressive voice controls: let users say things like “make it jazz” or “add drums” to instantly re-style their track.
-- Expand transcription to handle chords and complex rhythms for richer compositions.
-- Strengthen the accessibility and collaboration features to make music creation easier and more social.
+3. **Start the application:**
+   ```cmd
+   python front-end/app.py
+   ```
 
+### Manual Setup (Windows)
+
+1. **Create Python 3.11 environment for basic-pitch:**
+   ```cmd
+   python -m venv venv_basic_pitch
+   venv_basic_pitch\Scripts\activate
+   pip install -r requirements_basic_pitch.txt
+   ```
+
+2. **Create Python 3.13 environment for CUA:**
+   ```cmd
+   python -m venv venv_cua
+   venv_cua\Scripts\activate
+   pip install -r requirements_cua.txt
+   ```
+
+3. **Install main dependencies:**
+   ```cmd
+   pip install -r requirements.txt
+   ```
+
+### macOS Setup
+
+1. **Clone and setup:**
+   ```bash
+   git clone <your-repo-url>
+   cd music-app
+   chmod +x setup_mac.sh
+   ./setup_mac.sh
+   ```
+
+## 🎮 Usage
+
+### Method 1: GUI Application
+```cmd
+python front-end/app.py
+```
+
+### Method 2: Command Line
+```cmd
+python listen.py
+```
+
+## 🔧 Configuration
+
+### API Keys
+Make sure you have your Vapi API key set up in `listen.py`:
+```python
+API_KEY = "your-vapi-api-key-here"
+ASSISTANT_ID = "your-assistant-id-here"
+```
+
+### Docker Setup
+Ensure Docker Desktop is running for the CUA automation to work properly.
+
+## 📁 Project Structure
+
+```
+music-app/
+├── front-end/
+│   └── app.py              # GUI application
+├── listen.py               # Main orchestration script
+├── midi.py                 # MIDI conversion with basic-pitch
+├── cua.py                  # Computer automation for DAW
+├── hum.py                  # Hum recording functionality
+├── melody.py               # Optional: MusicGen for enhancement
+├── requirements.txt        # Main dependencies
+├── requirements_basic_pitch.txt  # Python 3.11 dependencies
+├── requirements_cua.txt    # Python 3.13 dependencies
+├── setup_windows.bat       # Windows setup script
+├── setup_mac.sh           # macOS setup script
+└── README.md              # This file
+```
+
+## 🔄 How It Works
+
+1. **Voice Input**: User speaks to specify instrument
+2. **Hum Recording**: User hums their melody
+3. **MIDI Conversion**: Audio is converted to MIDI using basic-pitch
+4. **DAW Automation**: CUA agent imports MIDI and plays in BandLab
+5. **Result**: Professional-sounding music track
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**"Module not found" errors:**
+- Make sure you're using the correct Python version for each component
+- Verify virtual environments are activated
+
+**Docker connection issues:**
+- Ensure Docker Desktop is running
+- Check if ports 8000 and 5900 are available
+
+**Audio recording issues:**
+- Check microphone permissions
+- Verify sounddevice installation
+
+**CUA automation not working:**
+- Ensure `cua-som` is installed in the Python 3.13 environment
+- Check Docker container logs
+
+### Environment Issues
+
+**Python version conflicts:**
+```cmd
+# Check Python versions
+python --version
+python3.11 --version
+python3.13 --version
+```
+
+**Virtual environment issues:**
+```cmd
+# Recreate environments if needed
+rmdir /s venv_basic_pitch venv_cua
+setup_windows.bat
+```
+
+## 🚀 Advanced Usage
+
+### Custom Instruments
+Modify the instrument detection in `listen.py` to add more instrument types.
+
+### Different DAWs
+Update `cua.py` to work with other DAWs like Logic Pro, Ableton Live, etc.
+
+### Music Enhancement
+Use `melody.py` to enhance your generated MIDI with AI-generated accompaniments.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test on both Windows and macOS
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- **Vapi** for voice AI capabilities
+- **basic-pitch** for audio-to-MIDI conversion
+- **CUA** for computer automation
+- **BandLab** for the DAW platform
+- **MusicGen** for optional music enhancement
+
+## 📞 Support
+
+If you encounter any issues:
+1. Check the troubleshooting section
+2. Review the logs in the console
+3. Ensure all prerequisites are installed
+4. Create an issue in the repository
+
+---
+
+**Happy Music Making! 🎶**

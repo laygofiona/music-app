@@ -219,6 +219,8 @@ class MicUI(QtWidgets.QWidget):
 
         print("ON")
 
+
+
         # Run listen.py backend inside thread
         thread = threading.Thread(target=start_listening, daemon=True)
         thread.start()
