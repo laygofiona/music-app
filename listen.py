@@ -168,7 +168,19 @@ async def full_pipeline():
         print("🚀 Sending to CUA for DAW processing...")
         venv_cua = os.path.join(script_dir, "venv_cua")
         
-        # Create temporary script for CUA
+        # Create audio context for Ollama enhancement
+        # This context helps Ollama generate better, more specific prompts
+        audio_context = {
+            "user_intent": f"Create a {instrument} melody from humming",
+            "instrument_type": instrument,
+            "audio_source": "user_humming",
+            "processing_method": "basic_pitch_midi_conversion",
+            "target_daw": "bandlab_studio",
+            "user_experience_level": "beginner",  # Could be enhanced with user detection
+            "preferred_workflow": "automated_import_and_play"
+        }
+        
+        # Create temporary script for CUA with audio context
         temp_script = f"""import asyncio
 import sys
 import os
@@ -178,7 +190,8 @@ from cua import computer_use_agent
 async def main():
     midi_file = "{midi_file}"
     instrument = "{instrument}"
-    await computer_use_agent(midi_file, instrument)
+    audio_context = {audio_context}
+    await computer_use_agent(midi_file, instrument, audio_context)
 
 if __name__ == "__main__":
     asyncio.run(main())

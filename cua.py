@@ -3,15 +3,23 @@ import asyncio
 import logging
 from pathlib import Path
 from agent import ComputerAgent
+from ollama_prompt import OllamaPromptEnhancer  # Import our new Ollama prompt enhancer
 
 
-async def computer_use_agent(midi_file='./hum_basic_pitch.mid', instrument='guitar'):
+async def computer_use_agent(midi_file='./hum_basic_pitch.mid', instrument='guitar', audio_context=None):
     """
-    Main async function that handles the computer automation.
+    Main async function that handles the computer automation with Ollama-enhanced prompts.
     This function:
     1. Reads the MIDI file created from your humming
-    2. Connects to a cloud computer environment  
-    3. Uploads the MIDI file to the remote computer
+    2. Uses Ollama to generate better prompts based on audio context
+    3. Connects to a cloud computer environment  
+    4. Uploads the MIDI file to the remote computer
+    5. Executes Ollama-enhanced automation instructions
+    
+    Args:
+        midi_file: Path to the MIDI file to process
+        instrument: The instrument type (e.g., 'guitar', 'piano', 'drums')
+        audio_context: Additional context about the audio (optional)
     """
     # Read the MIDI file that was generated from your humming
     midi_file = open(midi_file, "rb")
@@ -40,56 +48,29 @@ async def computer_use_agent(midi_file='./hum_basic_pitch.mid', instrument='guit
         midi_name = "midi-file-name.midi"
 
 
+        # Initialize Ollama prompt enhancer to generate better instructions
+        print("🤖 Initializing Ollama prompt enhancer...")
+        prompt_enhancer = OllamaPromptEnhancer()
+        
+        # Generate enhanced prompt using Ollama based on audio context
+        print("🧠 Generating enhanced prompt with Ollama...")
+        enhanced_prompt = prompt_enhancer.generate_cua_prompt(
+            instrument=instrument,
+            midi_file=f"~/Downloads/{midi_name}",
+            audio_context=audio_context
+        )
+        
+        print("✅ Ollama generated enhanced prompt")
+        print(f"📝 Prompt length: {len(enhanced_prompt)} characters")
+        
         # Use Anthropic model for computer automation
         agent = ComputerAgent(
-            model="omniparser+ollama_chat/llama3.2:latest",
+            model="anthropic/claude-3-5-sonnet-20240620",
             tools=[container]
         )
 
-        tasks = [f"""
-You are inside BandLab Studio in Firefox on Linux. p
-
-Goal: Import the MIDI file and play it with the chosen instrument.
-
-FILE TO IMPORT: "~/Downloads/midi-file-name.midi"
-FILE NAME ONLY: 
-INSTRUMENT: {instrument}
-
-Do the following step by step:
-
-1. If {instrument} is not a drum:
-   - Check if there is an existing track (a colored chunk in the main workspace).
-   - If a track exists:
-     - Drag the long white cursor to the end of the existing track.
-     - Select the newly added chunk.
-     - Drag and drop the entire newly added chunk so that the **beginning edge** of the selected chunk aligns with the position of the long white cursor.
-   - If no track exists, continue to the next step.
-
-2. Click the dashed box in the timeline that says “Drop a loop or an audio/MIDI/video file”.
-   - This should open a file upload dialog.
-
-3. In the file dialog:
-   - Click “Downloads” in the sidebar.
-   - Find and double-click “{midi_name}”.
-   - If it’s not visible, type “{midi_name}” into the filename field and press Enter.
-   - Wait until the MIDI region appears on the timeline.
-   - Take a screenshot.
-   
-4. Click the "Instrument" button in the bottom left corner. It is the button with the text "Instrument" and an icon of a piano.
-
-5. Click the grey button with text "Grand Piano". Wait for a pop up called Browse Instruments to show up. 
-
-6. In the search bar, type in the {instrument} name. Select the first clickable option in the list in the pop up. Click the "Instrument" button in the bottom left corner.
-
-7. Click the play button at the top. It is a button with a triangle rotated to the side as an icon. It is the button, that when you hover, it shows text "Play (Left or Right)".
-
-8. Once the long white cursor has moved past the colored MIDI chunk, immediately press the stop button which has a white square as the icon. It is the button, that when you hover, it shows text "Stop (Space)"
-
-
-Rules:
-- Always interact inside BandLab, not the browser’s URL bar.
-- Use precise clicks; scroll if needed.
-"""]
+        # Use the Ollama-enhanced prompt instead of hardcoded instructions
+        tasks = [enhanced_prompt]
 
         for i, task in enumerate(tasks):
             print(f"\nExecuting task {i}/{len(tasks)}: {task}")
